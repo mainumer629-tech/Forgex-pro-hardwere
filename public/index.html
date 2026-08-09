@@ -4,67 +4,62 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Switch Hub</title>
-  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #121212;
+      background-color: #1a1a1a;
       color: #ffffff;
+      font-family: Arial, sans-serif;
       text-align: center;
       padding: 30px;
     }
     .card {
-      background: #1e1e1e;
-      max-width: 600px;
-      margin: auto;
+      background: #282828;
+      border-radius: 10px;
       padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      max-width: 600px;
+      margin: 0 auto;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
-    h1 { font-size: 24px; }
-    .status {
-      font-size: 22px;
-      margin: 15px 0;
-      color: #2196F3;
+    .status-text {
+      font-size: 24px;
       font-weight: bold;
+      color: #2196F3;
+      margin: 20px 0;
     }
-    button {
+    .btn {
       padding: 12px 25px;
       font-size: 16px;
-      margin: 8px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
       font-weight: bold;
-      transition: 0.2s;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
     }
     .btn-on { background-color: #2e7d32; color: white; }
     .btn-off { background-color: #c62828; color: white; }
-    button:hover { opacity: 0.85; transform: scale(1.03); }
-    
+    .btn:hover { opacity: 0.8; }
     table {
       width: 100%;
-      margin-top: 25px;
+      margin-top: 20px;
       border-collapse: collapse;
-      font-size: 14px;
     }
     th, td {
       padding: 10px;
-      border-bottom: 1px solid #333;
+      border-bottom: 1px solid #444;
     }
-    th { background-color: #2d2d2d; color: #2196F3; }
+    th { color: #2196F3; }
+    .status-green { color: #4CAF50; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <div class="card">
-    <h1>🎛️ Smart Switch Hub</h1>
-    <div class="status">Status: <span id="device-status">Loading...</span></div>
+    <h2>🎛️ Smart Switch Hub</h2>
+    <div class="status-text">Status: <span id="currentStatus">OFF</span></div>
 
-    <div>
-      <button class="btn-on" onclick="sendControl('ON')">Turn ON</button>
-      <button class="btn-off" onclick="sendControl('OFF')">Turn OFF</button>
-    </div>
+    <button class="btn btn-on" id="onBtn">Turn ON</button>
+    <button class="btn btn-off" id="offBtn">Turn OFF</button>
 
     <h3>📜 History Log (SQLite Records)</h3>
     <table>
@@ -76,54 +71,69 @@
           <th>Timestamp</th>
         </tr>
       </thead>
-      <tbody id="history-table">
-        </tbody>
+      <tbody id="logsTable"></tbody>
     </table>
   </div>
 
   <script>
     const socket = io();
 
-    // 🚀 Refresh par Aakhri Saved Status Show Karein
-    function loadLatestStatus() {
-      fetch('/api/latest-status')
-        .then(res => res.json())
-        .then(data => {
-          document.getElementById('device-status').innerText = data.status;
-        });
+    function addLogRow(log) {
+      if (!log.id) return;
+      const tbody = document.getElementById('logsTable');
+      
+      // Avoid duplicate rendering
+      if (document.getElementById(`row-${log.id}`)) return;
+
+      const row = document.createElement('tr');
+      row.id = `row-${log.id}`;
+      row.innerHTML = `
+        <td>${log.id}</td>
+        <td>${log.device || 'Relay1'}</td>
+        <td class="status-green">${log.status}</td>
+        <td>${log.timestamp ? new Date(log.timestamp).toLocaleString() : '-'}</td>
+      `;
+      tbody.insertBefore(row, tbody.firstChild);
     }
 
-    function fetchHistory() {
-      fetch('/api/history')
+    function loadLogs() {
+      fetch('/api/logs')
         .then(res => res.json())
         .then(data => {
-          const tbody = document.getElementById('history-table');
-          tbody.innerHTML = '';
-          data.forEach(row => {
-            tbody.innerHTML += `
-              <tr>
-                <td>${row.id}</td>
-                <td>${row.device}</td>
-                <td style="color: ${row.status === 'ON' || row.status.includes('CAR') || row.status.includes('DETECTED') ? '#4CAF50' : '#F44336'}; font-weight: bold;">${row.status}</td>
-                <td>${row.timestamp}</td>
-              </tr>
-            `;
-          });
-        });
+          if (Array.isArray(data) && data.length > 0) {
+            document.getElementById('currentStatus').innerText = data[0].status;
+            data.forEach(log => addLogRow(log));
+          }
+        })
+        .catch(err => console.log("Fetch error, keeping default status: OFF"));
     }
 
-    function sendControl(status) {
-      socket.emit('toggle-relay', { device: 'Relay1', status: status });
+    function sendSwitchCommand(status) {
+      // Immediate UI Feedback for instant button click feel
+      document.getElementById('currentStatus').innerText = status;
+
+      fetch('/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device: 'Relay1', status: status })
+      });
     }
+
+    document.getElementById('onBtn').onclick = () => sendSwitchCommand('ON');
+    document.getElementById('offBtn').onclick = () => sendSwitchCommand('OFF');
 
     socket.on('hardware-status', (data) => {
-      document.getElementById('device-status').innerText = data.status;
-      fetchHistory();
+      if (data.status) {
+        document.getElementById('currentStatus').innerText = data.status;
+      }
+      if (data.id) {
+        addLogRow(data);
+      }
     });
 
-    // Initial Calls
-    loadLatestStatus();
-    fetchHistory();
+    // Load history logs after layout render
+    loadLogs();
   </script>
+
 </body>
 </html>

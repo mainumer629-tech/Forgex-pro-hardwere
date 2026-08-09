@@ -59,7 +59,7 @@
 
   <div class="card">
     <h1>🎛️ Smart Switch Hub</h1>
-    <div class="status">Status: <span id="device-status">OFF</span></div>
+    <div class="status">Status: <span id="device-status">Loading...</span></div>
 
     <div>
       <button class="btn-on" onclick="sendControl('ON')">Turn ON</button>
@@ -84,6 +84,15 @@
   <script>
     const socket = io();
 
+    // 🚀 Refresh par Aakhri Saved Status Show Karein
+    function loadLatestStatus() {
+      fetch('/api/latest-status')
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('device-status').innerText = data.status;
+        });
+    }
+
     function fetchHistory() {
       fetch('/api/history')
         .then(res => res.json())
@@ -95,7 +104,7 @@
               <tr>
                 <td>${row.id}</td>
                 <td>${row.device}</td>
-                <td style="color: ${row.status === 'ON' || row.status === 'DETECTED' ? '#4CAF50' : '#F44336'}; font-weight: bold;">${row.status}</td>
+                <td style="color: ${row.status === 'ON' || row.status.includes('CAR') || row.status.includes('DETECTED') ? '#4CAF50' : '#F44336'}; font-weight: bold;">${row.status}</td>
                 <td>${row.timestamp}</td>
               </tr>
             `;
@@ -112,6 +121,8 @@
       fetchHistory();
     });
 
+    // Initial Calls
+    loadLatestStatus();
     fetchHistory();
   </script>
 </body>

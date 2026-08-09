@@ -1,10 +1,16 @@
-import requests
+// Smart Switch Hub Auto-Logger Test Script
+const plateNumber = "NVE598"; // Yahan koi bhi plate number likhein
 
-# Jaise hi Car ya Plate detect ho:
-plate_number = "LG598"  # Wo variable jahan plate saved hai
-
-# 🚀 Automation Request:
-requests.post('http://localhost:8080/api/log', json={
-    'device': 'Car-Detection-App',
-    'status': f'DETECTED: {plate_number}'
+fetch('http://localhost:8080/api/log', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    device: 'Car-Detection-App',
+    status: 'DETECTED: ' + plateNumber
+  })
 })
+.then(res => res.json())
+.then(data => console.log('✅ Status successfully sent to Smart Switch Hub:', data))
+.catch(err => console.error('❌ Error sending data:', err));

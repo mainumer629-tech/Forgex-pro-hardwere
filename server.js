@@ -25,7 +25,7 @@ db.run(`CREATE TABLE IF NOT EXISTS logs (
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 )`);
 
-// API Endpoints
+// Fetch logs
 app.get('/api/logs', (req, res) => {
   db.all('SELECT * FROM logs ORDER BY id DESC LIMIT 20', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -33,6 +33,7 @@ app.get('/api/logs', (req, res) => {
   });
 });
 
+// Post log/status update
 app.post('/api/log', (req, res) => {
   const { device, status } = req.body;
   db.run('INSERT INTO logs (device, status) VALUES (?, ?)', [device, status], function(err) {
@@ -43,11 +44,11 @@ app.post('/api/log', (req, res) => {
   });
 });
 
-// 🗑️ Delete All History Logs API
+// Clear history API
 app.delete('/api/clear-history', (req, res) => {
   db.run('DELETE FROM logs', [], (err) => {
     if (err) return res.status(500).json({ error: err.message });
-    io.emit('hardware-status', { status: 'OFF' });
+    io.emit('hardware-status', { status: 'OFF', cleared: true });
     res.json({ message: 'All history logs cleared successfully!' });
   });
 });

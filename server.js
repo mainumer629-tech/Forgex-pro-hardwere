@@ -1,4 +1,3 @@
-Set-Content server.js @'
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -44,7 +43,7 @@ app.post('/api/log', (req, res) => {
   });
 });
 
-// 🗑️ Delete All History Logs
+// 🗑️ Delete All History Logs API
 app.delete('/api/clear-history', (req, res) => {
   db.run('DELETE FROM logs', [], (err) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -56,4 +55,3 @@ app.delete('/api/clear-history', (req, res) => {
 server.listen(8080, () => {
   console.log('Server running on http://localhost:8080');
 });
-'@

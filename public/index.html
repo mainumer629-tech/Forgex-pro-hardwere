@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Real-Time Hardware Control Panel</title>
+  <title>Smart Switch Hub</title>
   <script src="/socket.io/socket.io.js"></script>
   <style>
     body {
@@ -58,7 +58,7 @@
 <body>
 
   <div class="card">
-    <h1>🎛️ Real-Time Hardware Control Panel</h1>
+    <h1>🎛️ Smart Switch Hub</h1>
     <div class="status">Status: <span id="device-status">OFF</span></div>
 
     <div>
@@ -95,7 +95,7 @@
               <tr>
                 <td>${row.id}</td>
                 <td>${row.device}</td>
-                <td style="color: ${row.status === 'ON' ? '#4CAF50' : '#F44336'}; font-weight: bold;">${row.status}</td>
+                <td style="color: ${row.status === 'ON' || row.status === 'DETECTED' ? '#4CAF50' : '#F44336'}; font-weight: bold;">${row.status}</td>
                 <td>${row.timestamp}</td>
               </tr>
             `;

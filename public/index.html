@@ -17,7 +17,7 @@
       background: #282828;
       border-radius: 10px;
       padding: 20px;
-      max-width: 600px;
+      max-width: 650px;
       margin: 0 auto;
       box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
@@ -28,8 +28,8 @@
       margin: 20px 0;
     }
     .btn {
-      padding: 12px 25px;
-      font-size: 16px;
+      padding: 10px 20px;
+      font-size: 15px;
       font-weight: bold;
       border: none;
       border-radius: 5px;
@@ -38,7 +38,9 @@
     }
     .btn-on { background-color: #2e7d32; color: white; }
     .btn-off { background-color: #c62828; color: white; }
-    .btn:hover { opacity: 0.8; }
+    .btn-clear { background-color: #d32f2f; color: white; font-size: 13px; padding: 6px 12px; }
+    .btn-del { background-color: #e53935; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+    .btn:hover, .btn-del:hover { opacity: 0.8; }
     table {
       width: 100%;
       margin-top: 20px;
@@ -50,6 +52,12 @@
     }
     th { color: #2196F3; }
     .status-green { color: #4CAF50; font-weight: bold; }
+    .header-flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -61,7 +69,11 @@
     <button class="btn btn-on" id="onBtn">Turn ON</button>
     <button class="btn btn-off" id="offBtn">Turn OFF</button>
 
-    <h3>📜 History Log (SQLite Records)</h3>
+    <div class="header-flex">
+      <h3>📜 History Log (SQLite Records)</h3>
+      <button class="btn btn-clear" onclick="clearAllLogs()">🗑️ Clear All</button>
+    </div>
+
     <table>
       <thead>
         <tr>
@@ -69,6 +81,7 @@
           <th>Device</th>
           <th>Status</th>
           <th>Timestamp</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody id="logsTable"></tbody>
@@ -81,8 +94,6 @@
     function addLogRow(log) {
       if (!log.id) return;
       const tbody = document.getElementById('logsTable');
-      
-      // Avoid duplicate rendering
       if (document.getElementById(`row-${log.id}`)) return;
 
       const row = document.createElement('tr');
@@ -92,6 +103,7 @@
         <td>${log.device || 'Relay1'}</td>
         <td class="status-green">${log.status}</td>
         <td>${log.timestamp ? new Date(log.timestamp).toLocaleString() : '-'}</td>
+        <td><button class="btn-del" onclick="deleteLog(${log.id})">Delete</button></td>
       `;
       tbody.insertBefore(row, tbody.firstChild);
     }
@@ -100,18 +112,17 @@
       fetch('/api/logs')
         .then(res => res.json())
         .then(data => {
+          const tbody = document.getElementById('logsTable');
+          tbody.innerHTML = '';
           if (Array.isArray(data) && data.length > 0) {
             document.getElementById('currentStatus').innerText = data[0].status;
             data.forEach(log => addLogRow(log));
           }
-        })
-        .catch(err => console.log("Fetch error, keeping default status: OFF"));
+        });
     }
 
     function sendSwitchCommand(status) {
-      // Immediate UI Feedback for instant button click feel
       document.getElementById('currentStatus').innerText = status;
-
       fetch('/api/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -119,19 +130,33 @@
       });
     }
 
+    function deleteLog(id) {
+      fetch(`/api/log/${id}`, { method: 'DELETE' });
+    }
+
+    function clearAllLogs() {
+      if (confirm("Kya aap saare history logs delete karna chahte hain?")) {
+        fetch('/api/clear-history', { method: 'DELETE' });
+      }
+    }
+
     document.getElementById('onBtn').onclick = () => sendSwitchCommand('ON');
     document.getElementById('offBtn').onclick = () => sendSwitchCommand('OFF');
 
     socket.on('hardware-status', (data) => {
-      if (data.status) {
-        document.getElementById('currentStatus').innerText = data.status;
-      }
-      if (data.id) {
-        addLogRow(data);
-      }
+      if (data.status) document.getElementById('currentStatus').innerText = data.status;
+      if (data.id) addLogRow(data);
     });
 
-    // Load history logs after layout render
+    socket.on('delete-log', (id) => {
+      const row = document.getElementById(`row-${id}`);
+      if (row) row.remove();
+    });
+
+    socket.on('clear-all-logs', () => {
+      document.getElementById('logsTable').innerHTML = '';
+    });
+
     loadLogs();
   </script>
 

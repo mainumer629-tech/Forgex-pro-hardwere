@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Switch Hub</title>
-  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <style>
     body {
       background-color: #1a1a1a;
@@ -72,14 +72,14 @@
         </tr>
       </thead>
       <tbody id="logsTable">
-        </tbody>
+      </tbody>
     </table>
   </div>
 
   <script>
     const socket = io();
 
-    // 1. Load initial logs from Server
+    // Fetch initial logs
     function loadLogs() {
       fetch('/api/logs')
         .then(res => res.json())
@@ -87,16 +87,17 @@
           const tbody = document.getElementById('logsTable');
           tbody.innerHTML = '';
           
-          if (data.length > 0) {
+          if (data && data.length > 0) {
             document.getElementById('currentStatus').innerText = data[0].status;
             data.forEach(log => addLogRow(log));
           } else {
             document.getElementById('currentStatus').innerText = 'OFF';
           }
-        });
+        })
+        .catch(err => console.error('Fetch Error:', err));
     }
 
-    // 2. Add row to HTML Table
+    // Add log row
     function addLogRow(log) {
       const tbody = document.getElementById('logsTable');
       const row = document.createElement('tr');
@@ -109,7 +110,7 @@
       tbody.insertBefore(row, tbody.firstChild);
     }
 
-    // 3. Send Button Click to Backend Server
+    // Send Switch Command
     function sendSwitchCommand(status) {
       fetch('/api/log', {
         method: 'POST',
@@ -121,7 +122,7 @@
       });
     }
 
-    // 4. Real-time updates via Socket.IO
+    // Real-time listener
     socket.on('hardware-status', (data) => {
       if (data.status) {
         document.getElementById('currentStatus').innerText = data.status;
@@ -131,7 +132,6 @@
       }
     });
 
-    // Run on page load
     loadLogs();
   </script>
 
